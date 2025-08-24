@@ -1,9 +1,9 @@
-// Timer state machine
+
 enum TimerState { case idle, armed, ready, running }
 
 import SwiftUI
 import AppKit
-// Tab enumeration for bottom navigation
+
 enum Tab { case timing, history, settings }
 
 // History view placeholder
@@ -51,12 +51,11 @@ struct TabButton: View {
     }
 }
 
-// Content view with bottom navigation
+// Content view
 struct ContentView: View {
     @State private var selectedTab: Tab = .timing
     @State private var timerState: TimerState = .idle
 
-    // Computed property for selected tab index
     private var selectedTabIndex: Int {
         switch selectedTab {
         case .timing: return 0
@@ -76,7 +75,7 @@ struct ContentView: View {
                 .offset(x: -CGFloat(selectedTabIndex) * geo.size.width)
                 .animation(.easeInOut(duration: 0.3), value: selectedTab)
             }
-            // Bottom tab bar with sliding capsule indicator
+            // tab indicator
             VStack { Spacer()
                 let buttonWidth: CGFloat = 40
                 let spacing: CGFloat = 40
@@ -91,7 +90,7 @@ struct ContentView: View {
                     .padding(12)
                     .background(.ultraThinMaterial)
                     .cornerRadius(25)
-                    // Circular highlight behind selected button
+                    // Circular highlight
                     Circle()
                         .fill(Color.white.opacity(0.2))
                         .frame(width: buttonWidth, height: buttonWidth)
@@ -118,7 +117,7 @@ struct TimerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 顶部区域：打乱公式和魔方展开图
+            // top: scramble and cube map
             VStack(spacing: 16) {
                 CubeScrambleView(scramble: timerVM.currentScramble)
                     .frame(maxWidth: .infinity)
@@ -132,7 +131,7 @@ struct TimerView: View {
             
             Spacer()
             
-            // 中央计时显示
+            // timer
             VStack(spacing: 0) {
                 Text(timerVM.displayTime)
                     .foregroundColor(timerState == .armed ? .red : timerState == .ready ? .green : .white)
@@ -142,9 +141,9 @@ struct TimerView: View {
             .padding(.top,100)
             Spacer()
             
-            // 底部区域：3D魔方和蓝牙图标
+            // 3dcube &n bluetooth
             VStack(spacing: 0) {
-                // 3D魔方视图 - 放在窗口底部
+                // 3Dcube
 
                 Cube3DView(isTimerRunning: timerState == .running)
                     .frame(width: 2560, height: 500)
@@ -152,7 +151,7 @@ struct TimerView: View {
                     .offset(y: 40)
                     .opacity(timerState == .running ? 0 : 1)
                 
-                // 蓝牙图标 - 右下角
+                // bluetooth
                 HStack {
                     Spacer()
                     Image(nsImage: NSImage(named: NSImage.bluetoothTemplateName)!)
@@ -190,8 +189,8 @@ struct TimerView: View {
                         }
                     case .keyUp:
                         if timerState == .armed {
-                            // released too early: cancel readiness
-                            // released too early: cancel readiness
+                            // released too early: cancel
+                        
                             readyWorkItem?.cancel()
                             timerState = .idle
                         } else if timerState == .ready {
@@ -202,7 +201,7 @@ struct TimerView: View {
                     default:
                         break
                     }
-                    // Swallow the space event to prevent system beep
+                 
                     return nil
                 }
                 // Any key press when running stops the timer

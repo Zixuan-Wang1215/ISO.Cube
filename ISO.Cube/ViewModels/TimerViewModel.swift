@@ -35,7 +35,7 @@ class TimerViewModel: ObservableObject {
         timer = nil
         isTiming = false
         currentScramble = ScrambleModel.generateScramble()
-        // 保存成绩逻辑稍后实现
+        // save results
     }
     
     private func formatTime(_ timeInterval: TimeInterval) -> String {

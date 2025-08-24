@@ -3,25 +3,25 @@ import SwiftUI
 struct CubeNetView: View {
     let scramble: String
     
-    // 定义魔方颜色
+    // Define cube colors
     private let colors: [String: Color] = [
-        "U": .white,    // 上面 - 白色
-        "D": .yellow,   // 下面 - 黄色
-        "F": .green,    // 前面 - 绿色
-        "B": .blue,     // 后面 - 蓝色
-        "L": .orange,   // 左面 - 橙色
-        "R": .red       // 右面 - 红色
+        "U": .white,    // Up face - white
+        "D": .yellow,   // Down face - yellow
+        "F": .green,    // Front face - green
+        "B": .blue,     // Back face - blue
+        "L": .orange,   // Left face - orange
+        "R": .red       // Right face - red
     ]
     
-    // 计算打乱后的颜色状态
+    // Calculate color state after scramble
     private func getCubeState() -> [[[String]]] {
-        // 初始化已解决的魔方状态
+        // Initialize solved cube state
         let faces = ["U", "D", "F", "B", "L", "R"]
         var cube: [[[String]]] = faces.map { face in
             Array(repeating: Array(repeating: face, count: 3), count: 3)
         }
         
-        // 解析打乱公式并应用
+        // Parse scramble formula and apply
         let moves = scramble.components(separatedBy: " ")
         for move in moves {
             if !move.isEmpty {
@@ -32,7 +32,7 @@ struct CubeNetView: View {
         return cube
     }
     
-    // 应用单个移动
+    // Apply single move
     private func applyMove(_ cube: inout [[[String]]], move: String) {
         let face = String(move.prefix(1))
         let modifier = move.count > 1 ? String(move.suffix(move.count - 1)) : ""
@@ -52,9 +52,9 @@ struct CubeNetView: View {
         }
     }
     
-    // U面旋转
+    // U face rotation
     private func uTurn(_ cube: inout [[[String]]], direction: String) {
-        // 旋转U面本身
+        // Rotate U face itself
         if direction == "'" {
             cube[0] = rotateFaceCounterClockwise(cube[0])
         } else if direction == "2" {
@@ -63,15 +63,15 @@ struct CubeNetView: View {
             cube[0] = rotateFaceClockwise(cube[0])
         }
         
-        // 旋转相邻面的上边
+        // Rotate adjacent faces' top edges
         let temp = cube[2][0]
         
-        if direction == "'" { // 逆时针
+        if direction == "'" { // Counterclockwise
             cube[2][0] = cube[4][0]
             cube[4][0] = cube[3][0]
             cube[3][0] = cube[5][0]
             cube[5][0] = temp
-        } else { // 顺时针或180度
+        } else { // Clockwise or 180 degrees
             cube[2][0] = cube[5][0]
             cube[5][0] = cube[3][0]
             cube[3][0] = cube[4][0]
@@ -79,9 +79,9 @@ struct CubeNetView: View {
         }
     }
     
-    // D面旋转
+    // D face rotation
     private func dTurn(_ cube: inout [[[String]]], direction: String) {
-        // 旋转D面本身
+        // Rotate D face itself
         if direction == "'" {
             cube[1] = rotateFaceCounterClockwise(cube[1])
         } else if direction == "2" {
@@ -90,15 +90,15 @@ struct CubeNetView: View {
             cube[1] = rotateFaceClockwise(cube[1])
         }
         
-        // 旋转相邻面的下边
+        // Rotate adjacent faces' bottom edges
         let temp = cube[2][2]
         
-        if direction == "'" { // 逆时针
+        if direction == "'" { // Counterclockwise
             cube[2][2] = cube[5][2]
             cube[5][2] = cube[3][2]
             cube[3][2] = cube[4][2]
             cube[4][2] = temp
-        } else { // 顺时针或180度
+        } else { // Clockwise or 180 degrees
             cube[2][2] = cube[4][2]
             cube[4][2] = cube[3][2]
             cube[3][2] = cube[5][2]
@@ -106,9 +106,9 @@ struct CubeNetView: View {
         }
     }
     
-    // F面旋转
+    // F face rotation
     private func fTurn(_ cube: inout [[[String]]], direction: String) {
-        // 旋转F面本身
+        // Rotate F face itself
         if direction == "'" {
             cube[2] = rotateFaceCounterClockwise(cube[2])
         } else if direction == "2" {
@@ -117,15 +117,15 @@ struct CubeNetView: View {
             cube[2] = rotateFaceClockwise(cube[2])
         }
         
-        // 旋转相邻面的边
+        // Rotate adjacent faces' edges
         let temp = cube[0][2]
         
-        if direction == "'" { // 逆时针
+        if direction == "'" { // Counterclockwise
             cube[0][2] = cube[5][0]
             cube[5][0] = cube[1][0].reversed()
             cube[1][0] = cube[4][2]
             cube[4][2] = temp.reversed()
-        } else { // 顺时针或180度
+        } else { // Clockwise or 180 degrees
             cube[0][2] = cube[4][2].reversed()
             cube[4][2] = cube[1][0]
             cube[1][0] = cube[5][0].reversed()
@@ -133,9 +133,9 @@ struct CubeNetView: View {
         }
     }
     
-    // B面旋转
+    // B face rotation
     private func bTurn(_ cube: inout [[[String]]], direction: String) {
-        // 旋转B面本身
+        // Rotate B face itself
         if direction == "'" {
             cube[3] = rotateFaceCounterClockwise(cube[3])
         } else if direction == "2" {
@@ -144,15 +144,15 @@ struct CubeNetView: View {
             cube[3] = rotateFaceClockwise(cube[3])
         }
         
-        // 旋转相邻面的边
+        // Rotate adjacent faces' edges
         let temp = cube[0][0]
         
-        if direction == "'" { // 逆时针
+        if direction == "'" { // Counterclockwise
             cube[0][0] = cube[4][0].reversed()
             cube[4][0] = cube[1][2]
             cube[1][2] = cube[5][2].reversed()
             cube[5][2] = temp
-        } else { // 顺时针或180度
+        } else { // Clockwise or 180 degrees
             cube[0][0] = cube[5][2]
             cube[5][2] = cube[1][2].reversed()
             cube[1][2] = cube[4][0]
@@ -160,9 +160,9 @@ struct CubeNetView: View {
         }
     }
     
-    // L面旋转
+    // L face rotation
     private func lTurn(_ cube: inout [[[String]]], direction: String) {
-        // 旋转L面本身
+        // Rotate L face itself
         if direction == "'" {
             cube[4] = rotateFaceCounterClockwise(cube[4])
         } else if direction == "2" {
@@ -171,10 +171,10 @@ struct CubeNetView: View {
             cube[4] = rotateFaceClockwise(cube[4])
         }
         
-        // 旋转相邻面的边
+        // Rotate adjacent faces' edges
         let temp = [cube[0][0][0], cube[0][1][0], cube[0][2][0]]
         
-        if direction == "'" { // 逆时针
+        if direction == "'" { // Counterclockwise
             cube[0][0][0] = cube[2][0][0]
             cube[0][1][0] = cube[2][1][0]
             cube[0][2][0] = cube[2][2][0]
@@ -187,7 +187,7 @@ struct CubeNetView: View {
             cube[3][0][2] = temp[2]
             cube[3][1][2] = temp[1]
             cube[3][2][2] = temp[0]
-        } else { // 顺时针或180度
+        } else { // Clockwise or 180 degrees
             cube[0][0][0] = cube[3][2][2]
             cube[0][1][0] = cube[3][1][2]
             cube[0][2][0] = cube[3][0][2]
@@ -203,9 +203,9 @@ struct CubeNetView: View {
         }
     }
     
-    // R面旋转
+    // R face rotation
     private func rTurn(_ cube: inout [[[String]]], direction: String) {
-        // 旋转R面本身
+        // Rotate R face itself
         if direction == "'" {
             cube[5] = rotateFaceCounterClockwise(cube[5])
         } else if direction == "2" {
@@ -214,10 +214,10 @@ struct CubeNetView: View {
             cube[5] = rotateFaceClockwise(cube[5])
         }
         
-        // 旋转相邻面的边
+        // Rotate adjacent faces' edges
         let temp = [cube[0][0][2], cube[0][1][2], cube[0][2][2]]
         
-        if direction == "'" { // 逆时针
+        if direction == "'" { // Counterclockwise
             cube[0][0][2] = cube[3][2][0]
             cube[0][1][2] = cube[3][1][0]
             cube[0][2][2] = cube[3][0][0]
@@ -230,7 +230,7 @@ struct CubeNetView: View {
             cube[2][0][2] = temp[0]
             cube[2][1][2] = temp[1]
             cube[2][2][2] = temp[2]
-        } else { // 顺时针或180度
+        } else { // Clockwise or 180 degrees
             cube[0][0][2] = cube[2][0][2]
             cube[0][1][2] = cube[2][1][2]
             cube[0][2][2] = cube[2][2][2]
@@ -246,7 +246,7 @@ struct CubeNetView: View {
         }
     }
     
-    // 顺时针旋转面
+    // Rotate face clockwise
     private func rotateFaceClockwise(_ face: [[String]]) -> [[String]] {
         let n = face.count
         var rotated = Array(repeating: Array(repeating: "", count: n), count: n)
@@ -258,7 +258,7 @@ struct CubeNetView: View {
         return rotated
     }
     
-    // 逆时针旋转面
+    // Rotate face counterclockwise
     private func rotateFaceCounterClockwise(_ face: [[String]]) -> [[String]] {
         let n = face.count
         var rotated = Array(repeating: Array(repeating: "", count: n), count: n)
@@ -270,7 +270,7 @@ struct CubeNetView: View {
         return rotated
     }
     
-    // 180度旋转面
+    // Rotate face 180 degrees
     private func rotateFace180(_ face: [[String]]) -> [[String]] {
         return rotateFaceClockwise(rotateFaceClockwise(face))
     }
@@ -285,11 +285,11 @@ struct CubeNetView: View {
                 // Define positions for the unfolded net: top, middle row of 4, bottom
                 let positions: [(Int, Int, Int)] = [
                     // Top face centered above
-                    (1, 0, 0), // 上面
+                    (1, 0, 0), // Up face
                     // Middle row: left, front, right, back
-                    (0, 1, 4), (1, 1, 2), (2, 1, 5), (3, 1, 3), // 左、前、右、后
+                    (0, 1, 4), (1, 1, 2), (2, 1, 5), (3, 1, 3), // Left, Front, Right, Back
                     // Bottom face
-                    (1, 2, 1)  // 下面
+                    (1, 2, 1)  // Down face
                 ]
                 
                 for pos in positions {
@@ -307,16 +307,16 @@ struct CubeNetView: View {
                                 width: cell/3,
                                 height: cell/3)
                             
-                            // 获取颜色
+                            // Get color
                             let colorName = cubeState[faceIndex][row][col]
                             let color = colors[colorName] ?? .gray
                             
-                            // 绘制填充色块
+                            // Draw filled color block
                             var fillPath = Path()
                             fillPath.addRect(cellRect)
                             context.fill(fillPath, with: .color(color))
                             
-                            // 绘制边框
+                            // Draw border
                             var borderPath = Path()
                             borderPath.addRect(cellRect)
                             context.stroke(borderPath, with: .color(.black), lineWidth: 0.5)
@@ -335,10 +335,3 @@ struct CubeNetView: View {
     }
 }
 
-struct CubeNetView_Previews: PreviewProvider {
-    static var previews: some View {
-        CubeNetView(scramble: "U' L' B")
-            .preferredColorScheme(.dark)
-            .frame(width: 300, height: 200)
-    }
-}

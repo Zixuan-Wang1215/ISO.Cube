@@ -1,6 +1,5 @@
-// Subclass SCNView to handle mouse hover events
+
 import AppKit
-// Subclass SCNView to do hit-testing on mouse move
 class HoverSCNView: SCNView {
     private var cameraRef: SCNCamera?
     private var cameraNodeRef: SCNNode?
@@ -11,33 +10,27 @@ class HoverSCNView: SCNView {
     private let bottomBarHeight: CGFloat = 200
     var isTimerRunning: Bool = false
 
-    /// Initialize camera reference and default saturation
+
     func initializeCamera() {
-        guard let node = scene?.rootNode.childNode(withName: "camera", recursively: true),
-              let cam = node.camera else { return }
+        let node = scene!.rootNode.childNode(withName: "camera", recursively: true)!
+        let cam = node.camera!
         cameraNodeRef = node
-        cubeNodeRef = scene?.rootNode.childNode(withName: "cube", recursively: true)
+        cubeNodeRef = scene!.rootNode.childNode(withName: "cube", recursively: true)!
         cameraRef = cam
         cam.wantsHDR = true
         cam.saturation = 0.1
     }
 
-    /// Ensures cameraRef is set, returns camera
-    private func ensureCamera() -> SCNCamera? {
-        if cameraRef == nil {
-            initializeCamera()
-        }
-        return cameraRef
-    }
+
 
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
-        // 清除旧的 trackingAreas
+        // Clear old trackingAreas
         for area in trackingAreas {
             removeTrackingArea(area)
         }
-        // 只监听 mouseMoved 事件，并且限制在可见区域
+        // Only listen to mouseMoved events and limit to visible area
         let opts: NSTrackingArea.Options = [.mouseMoved, .activeAlways, .inVisibleRect]
         let area = NSTrackingArea(rect: .zero, options: opts, owner: self, userInfo: nil)
         addTrackingArea(area)
@@ -46,7 +39,7 @@ class HoverSCNView: SCNView {
 
     override func mouseMoved(with event: NSEvent) {
         super.mouseMoved(with: event)
-        guard let cam = ensureCamera() else { return }
+        let cam = cameraRef!
         let loc = convert(event.locationInWindow, from: nil)
 
         // Define bottom button region
@@ -80,8 +73,8 @@ class HoverSCNView: SCNView {
             var node = hit.node
             while true {
                 if node.name == "cube" { return true }
-                guard let parent = node.parent else { break }
-                node = parent
+                if node.parent == nil { break }
+                node = node.parent!
             }
             return false
         }
@@ -124,30 +117,28 @@ struct Cube3DView: NSViewRepresentable {
         sceneView.scene = SCNScene(named: "3dcube.scn")
         sceneView.initializeCamera()
         sceneView.autoenablesDefaultLighting = true
-        sceneView.allowsCameraControl = false // 禁用用户拖拽和旋转
+        sceneView.allowsCameraControl = false // Disable user drag and rotation
         sceneView.backgroundColor = NSColor.clear
         
         /*
-         // 设置场景的全局光照
+         // Set global lighting for the scene
          let ambientLight = SCNNode()
          ambientLight.light = SCNLight()
          ambientLight.light?.type = .ambient
          ambientLight.light?.intensity = 500
          sceneView.scene?.rootNode.addChildNode(ambientLight)
          */
-        if let cubeNode = sceneView.scene?.rootNode.childNodes.first {
-            // 设置魔方倾斜45度并露出一个角
-            cubeNode.eulerAngles = SCNVector3(-Float.pi / 8, Float.pi / 4, 0)
-        }
+        let cubeNode = sceneView.scene!.rootNode.childNodes.first!
+        // Set cube tilt 45 degrees and expose one corner
+        cubeNode.eulerAngles = SCNVector3(-Float.pi / 8, Float.pi / 4, 0)
         // Initialize camera saturation to full
        
         return sceneView
     }
     
     func updateNSView(_ nsView: SCNView, context: Context) {
-        if let hoverView = nsView as? HoverSCNView {
-            hoverView.isTimerRunning = isTimerRunning
-        }
+        let hoverView = nsView as! HoverSCNView
+        hoverView.isTimerRunning = isTimerRunning
     }
     
 }

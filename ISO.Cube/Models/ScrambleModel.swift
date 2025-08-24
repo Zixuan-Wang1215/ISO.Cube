@@ -2,7 +2,6 @@ import Foundation
 
 struct ScrambleModel {
     static func generateScramble(length: Int = 20) -> String {
-        // Define all moves with modifiers
         let moves = ["F", "F'", "F2",
                      "R", "R'", "R2",
                      "U", "U'", "U2",
@@ -29,6 +28,5 @@ struct ScrambleModel {
         return scramble.joined(separator: " ")
     }
 }
-
 
 

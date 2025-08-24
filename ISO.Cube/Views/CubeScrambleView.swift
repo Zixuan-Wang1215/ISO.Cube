@@ -5,7 +5,7 @@ struct CubeScrambleView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // 打乱公式显示
+            // show scramble
             
             VStack(spacing: 8) {
                 Text("SCRAMBLE")
@@ -43,15 +43,3 @@ struct CubeScrambleView: View {
 
 }
 
-#if DEBUG
-struct CubeScrambleView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            CubeScrambleView(scramble: "R U R' U' R2 F2")
-                .previewLayout(.sizeThatFits)
-                .padding()
-                .preferredColorScheme(.dark)
-        }
-    }
-}
-#endif
