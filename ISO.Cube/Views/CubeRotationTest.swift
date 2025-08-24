@@ -54,11 +54,18 @@ struct RotationTestView: NSViewRepresentable {
         context.coordinator.rotationManager = manager
 
         // Execute action every 2 seconds
+        let moves = ["R", "U", "F", "D", "L", "B"]
+        var i = 0
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
-        timer.schedule(deadline: .now() + 2, repeating: 2, leeway: .seconds(1))
+        timer.schedule(deadline: .now() + 1, repeating: 1, leeway: .seconds(1))
         timer.setEventHandler { [weak manager] in
             guard let m = manager else { return }
-            m.applyMove("F'")
+            m.applyMove(moves[i])
+            print(moves[i])
+            i = i + 1
+            if i == 6 {
+                i = 0
+            }
         }
         timer.resume()
         context.coordinator.timer = timer
