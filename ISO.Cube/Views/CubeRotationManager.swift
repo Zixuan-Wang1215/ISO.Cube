@@ -4,6 +4,8 @@ import Foundation
 final class CubeRotationManager {
     let cubeNode: SCNNode
     let scene: SCNScene
+    private var isAnimating: Bool = false
+    private var moveQueue: [String] = []
 
     init(cubeNode: SCNNode, scene: SCNScene) {
         self.cubeNode = cubeNode
@@ -14,12 +16,21 @@ final class CubeRotationManager {
     func applyMove(_ move: String) {
         let normalizedMove = move.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         
+        // If currently animating, buffer this move
+        if isAnimating {
+            moveQueue.append(normalizedMove)
+            return
+        }
+        executeMove(normalizedMove)
+    }
+
+    private func executeMove(_ normalizedMove: String) {
         // Parse the move
         let face = String(normalizedMove.prefix(1))
         let isPrime = normalizedMove.contains("'")
         
         // Determine rotation axis and selector
-        let (axis, selector) = getAxisAndSelector(for: face)!
+        guard let (axis, selector) = getAxisAndSelector(for: face) else { return }
         
         // Determine rotation angle (clockwise is positive, counterclockwise is negative)
         let angle = isPrime ? -CGFloat.pi/2 : CGFloat.pi/2
@@ -38,22 +49,22 @@ final class CubeRotationManager {
         switch face {
         case "U": // Up face - rotate around Y axis, select cubies with Y > threshold
             return (SCNVector3(0, 1, 0), { cubie in
-                return cubie.position.y > threshold
+                return cubie.position.y < -threshold
             })
         case "D": // Down face - rotate around Y axis, select cubies with Y < -threshold
-            return (SCNVector3(0, 1, 0), { cubie in
-                return cubie.position.y < -threshold
+            return (SCNVector3(0, -1, 0), { cubie in
+                return cubie.position.y > threshold
             })
         case "F": // Front face - rotate around Z axis, select cubies with Z > threshold
             return (SCNVector3(0, 0, 1), { cubie in
-                return cubie.position.z > threshold
-            })
-        case "B": // Back face - rotate around Z axis, select cubies with Z < -threshold
-            return (SCNVector3(0, 0, 1), { cubie in
                 return cubie.position.z < -threshold
             })
-        case "R": // Right face - rotate around X axis, select cubies with X > threshold
-            return (SCNVector3(1, 0, 0), { cubie in
+        case "B": // Back face - rotate around Z axis, select cubies with Z < -threshold
+            return (SCNVector3(0, 0, -1), { cubie in
+                return cubie.position.z > threshold
+            })
+        case "R": // Right face - rotate around X axis (flipped direction), select cubies with X > threshold
+            return (SCNVector3(-1, 0, 0), { cubie in
                 return cubie.position.x > threshold
             })
         case "L": // Left face - rotate around X axis, select cubies with X < -threshold
@@ -67,6 +78,7 @@ final class CubeRotationManager {
     
     /// Execute face rotation
     private func rotateFace(selector: (SCNNode) -> Bool, axis: SCNVector3, angle: CGFloat) {
+        isAnimating = true
         // Select cubies to rotate
         let cubiesToRotate = cubeNode.childNodes.filter(selector)
         
@@ -83,7 +95,7 @@ final class CubeRotationManager {
         }
         
         // Execute rotation animation
-        let rotationAction = SCNAction.rotateBy(x: axis.x * angle, y: axis.y * angle, z: axis.z * angle, duration: 0.3)
+        let rotationAction = SCNAction.rotateBy(x: axis.x * angle, y: axis.y * angle, z: axis.z * angle, duration: 0.03)
         rotationAction.timingMode = .easeInEaseOut
         
         rotationNode.runAction(rotationAction) {
@@ -104,6 +116,13 @@ final class CubeRotationManager {
             
             // Clean up temporary rotation node
             rotationNode.removeFromParentNode()
+
+            // Mark animation finished and run next move if queued
+            self.isAnimating = false
+            if let next = self.moveQueue.first {
+                self.moveQueue.removeFirst()
+                self.executeMove(next)
+            }
         }
     }
 }

@@ -3,6 +3,8 @@ import SwiftUI
 import SceneKit
 
 struct RotationTestView: NSViewRepresentable {
+    var enableAutoTest: Bool = false
+    var onManagerReady: ((CubeRotationManager) -> Void)? = nil
     class Coordinator {
         // Rotation manager for cube operations
         var rotationManager: CubeRotationManager?
@@ -52,23 +54,25 @@ struct RotationTestView: NSViewRepresentable {
         // Create rotation manager
         let manager = CubeRotationManager(cubeNode: cubeNode, scene: scene)
         context.coordinator.rotationManager = manager
+        onManagerReady?(manager)
 
-        // Execute action every 2 seconds
-        let moves = ["R", "U", "F", "D", "L", "B"]
-        var i = 0
-        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
-        timer.schedule(deadline: .now() + 1, repeating: 1, leeway: .seconds(1))
-        timer.setEventHandler { [weak manager] in
-            guard let m = manager else { return }
-            m.applyMove(moves[i])
-            print(moves[i])
-            i = i + 1
-            if i == 6 {
-                i = 0
+        if enableAutoTest {
+            // Execute action periodically for testing
+            let moves = ["R", "U","R'", "U'"]
+            var i = 0
+            let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+            timer.schedule(deadline: .now() + 0.1, repeating: 0.1, leeway: .milliseconds(100))
+            timer.setEventHandler { [weak manager] in
+                guard let m = manager else { return }
+                m.applyMove(moves[i])
+                i = i + 1
+                if i == 4 {
+                    i = 0
+                }
             }
+            timer.resume()
+            context.coordinator.timer = timer
         }
-        timer.resume()
-        context.coordinator.timer = timer
 
         return scnView
     }
