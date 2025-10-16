@@ -154,41 +154,51 @@ class GanCubeManager:
     @staticmethod
     async def connect(manual_mac: Optional[str] = None) -> GanCubeConnection:
         """连接到GAN魔方"""
-        print("Scanning for GAN cube devices...")
         
-        # 扫描设备
-        print("Scanning Bluetooth devices...")
-        devices = await BleakScanner.discover(timeout=10.0)
-        print(f"Found {len(devices)} Bluetooth devices:")
-        
-        # 处理返回的数据结构
-        for i, device in enumerate(devices):
-            device_name = getattr(device, 'name', None) or 'Unknown'
-            print(f"  {i+1}. {device_name} [{device.address}]")
-        
-        target_device = None
-        
-        # 查找GAN魔方设备
-        for device in devices:
-            device_name = getattr(device, 'name', None)
-            if device_name:
-                device_name_upper = device_name.upper()
-                print(f"Checking device: '{device_name}' -> '{device_name_upper}'")
-                if any(prefix in device_name_upper for prefix in ["GAN", "MG", "AICUBE", "CUBE", "ICARRY"]):
-                    target_device = device
-                    print(f"Found matching device: {device_name}")
-                    break
-        
-        if not target_device:
-            print("Error: No GAN cube device found")
-            print("Please ensure:")
-            print("  1. GAN cube is powered on and discoverable")
-            print("  2. Device is within Bluetooth range")
-            print("  3. Device name contains 'GAN', 'MG', 'AiCube' or 'Cube'")
-            raise RuntimeError("No GAN cube device found")
-        
-        device_name = getattr(target_device, 'name', 'Unknown')
-        print(f"Found device: {device_name} [{target_device.address}]")
+        if manual_mac:
+            # 直接连接到指定设备
+            print(f"Connecting directly to device: {manual_mac}")
+            target_device = type('Device', (), {
+                'address': manual_mac,
+                'name': f'GAN-{manual_mac[:8]}'  # 使用UUID前8位作为名称
+            })()
+            device_name = target_device.name
+            print(f"Using device: {device_name} [{target_device.address}]")
+        else:
+            # 扫描设备
+            print("Scanning for GAN cube devices...")
+            print("Scanning Bluetooth devices...")
+            devices = await BleakScanner.discover(timeout=10.0)
+            print(f"Found {len(devices)} Bluetooth devices:")
+            
+            # 处理返回的数据结构
+            for i, device in enumerate(devices):
+                device_name = getattr(device, 'name', None) or 'Unknown'
+                print(f"  {i+1}. {device_name} [{device.address}]")
+            
+            target_device = None
+            
+            # 查找GAN魔方设备
+            for device in devices:
+                device_name = getattr(device, 'name', None)
+                if device_name:
+                    device_name_upper = device_name.upper()
+                    print(f"Checking device: '{device_name}' -> '{device_name_upper}'")
+                    if any(prefix in device_name_upper for prefix in ["GAN", "MG", "AICUBE", "CUBE", "ICARRY"]):
+                        target_device = device
+                        print(f"Found matching device: {device_name}")
+                        break
+            
+            if not target_device:
+                print("Error: No GAN cube device found")
+                print("Please ensure:")
+                print("  1. GAN cube is powered on and discoverable")
+                print("  2. Device is within Bluetooth range")
+                print("  3. Device name contains 'GAN', 'MG', 'AiCube' or 'Cube'")
+                raise RuntimeError("No GAN cube device found")
+            
+            device_name = getattr(target_device, 'name', 'Unknown')
+            print(f"Found device: {device_name} [{target_device.address}]")
         
         # 尝试从制造商数据中提取MAC地址
         mac_address = target_device.address  # 默认使用设备地址

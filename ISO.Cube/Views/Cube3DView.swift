@@ -9,6 +9,18 @@ class HoverSCNView: SCNView {
     private var debugTimer: Timer?
     private let bottomBarHeight: CGFloat = 200
     var isTimerRunning: Bool = false
+    var isCubeConfirmed: Bool = false
+    
+    // 保存原始状态
+    private var originalCameraPosition: SCNVector3?
+    private var originalCubePosition: SCNVector3?
+    private var originalSaturation: Float = 0.1
+    private var originalOpacity: Float = 1.0
+    
+    // 魔方旋转管理器
+    private var rotationManager: CubeRotationManager?
+    // 跟踪已处理的移动指令数量，避免重复执行
+    public var processedMoveCount: Int = 0
 
 
     func initializeCamera() {
@@ -19,6 +31,79 @@ class HoverSCNView: SCNView {
         cameraRef = cam
         cam.wantsHDR = true
         cam.saturation = 0.1
+        
+        // 保存原始状态
+        originalCameraPosition = node.position
+        originalCubePosition = cubeNodeRef!.position
+        originalSaturation = Float(cam.saturation)
+        originalOpacity = Float(cubeNodeRef!.opacity)
+        
+        // 初始化旋转管理器
+        if let cubeNode = cubeNodeRef, let scene = self.scene {
+            rotationManager = CubeRotationManager(cubeNode: cubeNode, scene: scene)
+        }
+    }
+    
+    func applyCubeConfirmedSettings() {
+        guard let cameraNode = cameraNodeRef,
+              let cubeNode = cubeNodeRef,
+              let camera = cameraRef else { return }
+        
+        // 使用SCNTransaction进行平滑的非线性动画过渡
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = 1.2  // 较长的动画时间
+        SCNTransaction.animationTimingFunction = CAMediaTimingFunction(controlPoints: 0.25, 0.1, 0.25, 1.0)  // 自定义贝塞尔曲线，实现ease-in-out效果
+        
+        // 设置相机位置为 (40, 25, 40)
+        let confirmedCameraPos = SCNVector3(40, 25, 40)
+        cameraNode.position = confirmedCameraPos
+        
+        // 设置魔方位置为 (2, 3, 2)
+        let confirmedCubePos = SCNVector3(2, 3, 2)
+        cubeNode.position = confirmedCubePos
+        
+        // 设置饱和度为1和透明度为1
+        camera.saturation = 1.0
+        cubeNode.opacity = 1.0
+        
+        SCNTransaction.commit()
+        
+        print("Applied cube confirmed settings with smooth animation: camera(40,25,40), cube(2,3,2), saturation=1.0, opacity=1.0")
+    }
+    
+    func restoreOriginalSettings() {
+        guard let cameraNode = cameraNodeRef,
+              let cubeNode = cubeNodeRef,
+              let camera = cameraRef,
+              let originalCamPos = originalCameraPosition,
+              let originalCubePos = originalCubePosition else { return }
+        
+        // 使用SCNTransaction进行平滑的非线性动画过渡恢复到原始状态
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = 1.0  // 稍微快一点的恢复动画
+        SCNTransaction.animationTimingFunction = CAMediaTimingFunction(controlPoints: 0.25, 0.1, 0.25, 1.0)  // 同样的ease-in-out效果
+        
+        // 恢复相机位置到原始状态
+        cameraNode.position = originalCamPos
+        
+        // 恢复魔方位置到原始状态
+        cubeNode.position = originalCubePos
+        
+        // 恢复饱和度到原始状态
+        camera.saturation = CGFloat(originalSaturation)
+        
+        // 恢复透明度到原始状态
+        cubeNode.opacity = CGFloat(originalOpacity)
+        
+        SCNTransaction.commit()
+        
+        print("Restored original settings with smooth animation")
+    }
+    
+    // 处理魔方移动指令
+    func handleMoveInstruction(_ move: String) {
+        guard let manager = rotationManager else { return }
+        manager.applyMove(move)
     }
 
 
@@ -39,6 +124,12 @@ class HoverSCNView: SCNView {
 
     override func mouseMoved(with event: NSEvent) {
         super.mouseMoved(with: event)
+        
+        // 如果cube已确认连接，禁用鼠标悬浮交互
+        if isCubeConfirmed {
+            return
+        }
+        
         let cam = cameraRef!
         let loc = convert(event.locationInWindow, from: nil)
 
@@ -110,10 +201,13 @@ import SceneKit
 
 struct Cube3DView: NSViewRepresentable {
     let isTimerRunning: Bool
+    let isCubeConfirmed: Bool
+    let moveOutput: String
     
     func makeNSView(context: Context) -> SCNView {
         let sceneView = HoverSCNView()
         sceneView.isTimerRunning = isTimerRunning
+        sceneView.isCubeConfirmed = isCubeConfirmed
         sceneView.scene = SCNScene(named: "3dcube.scn")
         sceneView.initializeCamera()
         sceneView.autoenablesDefaultLighting = true
@@ -138,7 +232,48 @@ struct Cube3DView: NSViewRepresentable {
     
     func updateNSView(_ nsView: SCNView, context: Context) {
         let hoverView = nsView as! HoverSCNView
+        let wasConfirmed = hoverView.isCubeConfirmed
         hoverView.isTimerRunning = isTimerRunning
+        hoverView.isCubeConfirmed = isCubeConfirmed
+        
+        // 如果cube刚刚被确认，应用设置
+        if isCubeConfirmed && !wasConfirmed {
+            hoverView.applyCubeConfirmedSettings()
+        }
+        // 如果cube刚刚被取消确认，恢复原始设置
+        else if !isCubeConfirmed && wasConfirmed {
+            hoverView.restoreOriginalSettings()
+            // 重置移动计数器
+            hoverView.processedMoveCount = 0
+        }
+        
+        // 处理移动输出 - 只处理新的移动指令
+        if !moveOutput.isEmpty {
+            let lines = moveOutput.components(separatedBy: .newlines)
+            let moveLines = lines.filter { $0.hasPrefix("Move:") }
+            
+            // 只处理新的移动指令
+            if moveLines.count > hoverView.processedMoveCount {
+                let newMoves = Array(moveLines[hoverView.processedMoveCount...])
+                
+                for line in newMoves {
+                    let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                    // 提取移动令牌
+                    var moveToken = trimmedLine.replacingOccurrences(of: "Move:", with: "")
+                    if let commaIdx = moveToken.firstIndex(of: ",") {
+                        moveToken = String(moveToken[..<commaIdx])
+                    }
+                    moveToken = moveToken.trimmingCharacters(in: .whitespaces)
+                    
+                    if !moveToken.isEmpty {
+                        hoverView.handleMoveInstruction(moveToken)
+                    }
+                }
+                
+                // 更新已处理的移动数量
+                hoverView.processedMoveCount = moveLines.count
+            }
+        }
     }
     
 }

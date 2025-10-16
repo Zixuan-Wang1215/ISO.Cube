@@ -78,11 +78,22 @@ final class CubeRotationManager {
     
     /// Execute face rotation
     private func rotateFace(selector: (SCNNode) -> Bool, axis: SCNVector3, angle: CGFloat) {
-        isAnimating = true
-        // Select cubies to rotate
+        // Select cubies to rotate first
         let cubiesToRotate = cubeNode.childNodes.filter(selector)
-        
-        guard !cubiesToRotate.isEmpty else { return }
+
+        // If nothing to rotate, don't get stuck in animating state — advance the queue
+        guard !cubiesToRotate.isEmpty else {
+            // Ensure we are not marked animating when no-op
+            self.isAnimating = false
+            if let next = self.moveQueue.first {
+                self.moveQueue.removeFirst()
+                self.executeMove(next)
+            }
+            return
+        }
+
+        // Mark as animating only when we actually have an animation to run
+        isAnimating = true
         
         // Create temporary rotation node
         let rotationNode = SCNNode()
@@ -95,33 +106,36 @@ final class CubeRotationManager {
         }
         
         // Execute rotation animation
-        let rotationAction = SCNAction.rotateBy(x: axis.x * angle, y: axis.y * angle, z: axis.z * angle, duration: 0.03)
+        let rotationAction = SCNAction.rotateBy(x: axis.x * angle, y: axis.y * angle, z: axis.z * angle, duration: 0.05)
         rotationAction.timingMode = .easeInEaseOut
         
         rotationNode.runAction(rotationAction) {
-            // Save rotated transforms
-            var rotatedCubies: [(SCNNode, SCNMatrix4)] = []
-            for cubie in cubiesToRotate {
-                let finalTransform = cubie.worldTransform
-                rotatedCubies.append((cubie, finalTransform))
-            }
-            
-            // Move cubies back to cube node and apply rotated transforms
-            for (cubie, finalTransform) in rotatedCubies {
-                self.cubeNode.addChildNode(cubie)
-                // Convert world transform to local transform relative to cubeNode
-                let localTransform = self.cubeNode.convertTransform(finalTransform, from: nil)
-                cubie.transform = localTransform
-            }
-            
-            // Clean up temporary rotation node
-            rotationNode.removeFromParentNode()
+            // Ensure SceneKit graph updates and queue progression occur on the main thread
+            DispatchQueue.main.async {
+                // Save rotated transforms
+                var rotatedCubies: [(SCNNode, SCNMatrix4)] = []
+                for cubie in cubiesToRotate {
+                    let finalTransform = cubie.worldTransform
+                    rotatedCubies.append((cubie, finalTransform))
+                }
+                
+                // Move cubies back to cube node and apply rotated transforms
+                for (cubie, finalTransform) in rotatedCubies {
+                    self.cubeNode.addChildNode(cubie)
+                    // Convert world transform to local transform relative to cubeNode
+                    let localTransform = self.cubeNode.convertTransform(finalTransform, from: nil)
+                    cubie.transform = localTransform
+                }
+                
+                // Clean up temporary rotation node
+                rotationNode.removeFromParentNode()
 
-            // Mark animation finished and run next move if queued
-            self.isAnimating = false
-            if let next = self.moveQueue.first {
-                self.moveQueue.removeFirst()
-                self.executeMove(next)
+                // Mark animation finished and run next move if queued
+                self.isAnimating = false
+                if let next = self.moveQueue.first {
+                    self.moveQueue.removeFirst()
+                    self.executeMove(next)
+                }
             }
         }
     }

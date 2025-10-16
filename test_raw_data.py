@@ -34,9 +34,20 @@ async def main():
         debug_filter = DebugFilter(original_stdout)
         sys.stdout = debug_filter
         
+        # 检查是否提供了设备地址参数
+        device_address = None
+        if len(sys.argv) > 1:
+            device_address = sys.argv[1]
+            print(f"Connecting to specific device: {device_address}")
+        
         # 连接到魔方
-        cube = await GanCubeManager.connect()
+        if device_address:
+            cube = await GanCubeManager.connect(manual_mac=device_address)
+        else:
+            cube = await GanCubeManager.connect()
         print("Connected successfully!")
+        # 发送连接确认消息给Swift应用
+        print("CUBE_CONNECTED_CONFIRMATION")
         
         # 陀螺仪数据缓存
         latest_gyro_data = None
