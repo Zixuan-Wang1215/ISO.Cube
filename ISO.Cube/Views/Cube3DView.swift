@@ -10,6 +10,7 @@ class HoverSCNView: SCNView {
     private let bottomBarHeight: CGFloat = 200
     var isTimerRunning: Bool = false
     var isCubeConfirmed: Bool = false
+    var disableInteraction: Bool = false
     
     // 保存原始状态
     private var originalCameraPosition: SCNVector3?
@@ -125,8 +126,8 @@ class HoverSCNView: SCNView {
     override func mouseMoved(with event: NSEvent) {
         super.mouseMoved(with: event)
         
-        // 如果cube已确认连接，禁用鼠标悬浮交互
-        if isCubeConfirmed {
+        // 如果禁用交互或cube已确认连接，禁用鼠标悬浮交互
+        if disableInteraction || isCubeConfirmed {
             return
         }
         
@@ -137,7 +138,7 @@ class HoverSCNView: SCNView {
         let buttonWidth: CGFloat = 40
         let spacing: CGFloat = 40
         let horizontalPadding: CGFloat = 12 * 2
-        let barWidth = buttonWidth * 3 + spacing * 2 + horizontalPadding
+        let barWidth = buttonWidth * 3 + spacing * 2 + horizontalPadding+50
         let xMin = (bounds.width - barWidth) / 2
         let xMax = xMin + barWidth
         let yThreshold = bottomBarHeight
@@ -203,11 +204,13 @@ struct Cube3DView: NSViewRepresentable {
     let isTimerRunning: Bool
     let isCubeConfirmed: Bool
     let moveOutput: String
+    let disableInteraction: Bool
     
     func makeNSView(context: Context) -> SCNView {
         let sceneView = HoverSCNView()
         sceneView.isTimerRunning = isTimerRunning
         sceneView.isCubeConfirmed = isCubeConfirmed
+        sceneView.disableInteraction = disableInteraction
         sceneView.scene = SCNScene(named: "3dcube.scn")
         sceneView.initializeCamera()
         sceneView.autoenablesDefaultLighting = true
@@ -235,6 +238,7 @@ struct Cube3DView: NSViewRepresentable {
         let wasConfirmed = hoverView.isCubeConfirmed
         hoverView.isTimerRunning = isTimerRunning
         hoverView.isCubeConfirmed = isCubeConfirmed
+        hoverView.disableInteraction = disableInteraction
         
         // 如果cube刚刚被确认，应用设置
         if isCubeConfirmed && !wasConfirmed {
