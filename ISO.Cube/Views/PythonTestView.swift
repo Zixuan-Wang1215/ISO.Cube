@@ -18,7 +18,7 @@ struct PythonTestView: View {
                         runScript()
                     }
                 }) {
-                    Text(isRunning ? "Stop" : "Run test_raw_data.py")
+                    Text(isRunning ? LocalizationKey.stop.localized : "\(LocalizationKey.run.localized) test_raw_data.py")
                 }
                 .keyboardShortcut(.defaultAction)
 
@@ -26,7 +26,7 @@ struct PythonTestView: View {
             }
 
             ScrollView {
-                Text(output.isEmpty ? "(no output)" : output)
+                Text(output.isEmpty ? LocalizationKey.noOutput.localized : output)
                     .font(.system(.body, design: .monospaced))
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .padding(8)

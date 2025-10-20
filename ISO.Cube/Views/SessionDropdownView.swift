@@ -24,7 +24,7 @@ struct SessionDropdownView: View {
                     Text("📝")
                         .font(.system(size: 14))
                     
-                    Text(historyManager.currentSession?.name ?? "Session 1")
+                    Text(historyManager.currentSession?.name ?? "\(LocalizationKey.newSession.localized) 1")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white)
                         .lineLimit(1)
@@ -97,7 +97,7 @@ struct SessionDropdownView: View {
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.blue)
                             
-                            Text("Add")
+                            Text(LocalizationKey.addSession.localized)
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.blue)
                             
@@ -156,27 +156,27 @@ struct SessionDropdownView: View {
             )
         }
         .sheet(isPresented: $showingRenameSession) {
-            if let session = sessionToRename {
-                RenameSessionView(
-                    sessionName: $newSessionName,
-                    onSave: { name in
+            RenameSessionView(
+                sessionName: $newSessionName,
+                onSave: { name in
+                    if let session = sessionToRename {
                         if historyManager.renameSession(id: session.id, newName: name) {
                             showingRenameSession = false
                             sessionToRename = nil
                         }
-                    },
-                    onCancel: {
-                        showingRenameSession = false
-                        sessionToRename = nil
                     }
-                )
-            }
+                },
+                onCancel: {
+                    showingRenameSession = false
+                    sessionToRename = nil
+                }
+            )
         }
-        .alert("Delete Session", isPresented: $showingDeleteAlert) {
-            Button("Cancel", role: .cancel) {
+        .alert(LocalizationKey.deleteSession.localized, isPresented: $showingDeleteAlert) {
+            Button(LocalizationKey.cancel.localized, role: .cancel) {
                 sessionToDelete = nil
             }
-            Button("Delete", role: .destructive) {
+            Button(LocalizationKey.delete.localized, role: .destructive) {
                 if let session = sessionToDelete {
                     let success = historyManager.deleteSession(id: session.id)
                     if success {
@@ -186,7 +186,7 @@ struct SessionDropdownView: View {
             }
         } message: {
             if let session = sessionToDelete {
-                Text("Are you sure you want to delete '\(session.name)'? This action cannot be undone.")
+                Text("\(LocalizationKey.areYouSureDelete.localized) '\(session.name)'? \(LocalizationKey.thisActionCannotBeUndone.localized)")
             }
         }
     }
@@ -230,11 +230,11 @@ struct SessionRowView: View {
             
             // Context menu for rename/delete
             Menu {
-                Button("Rename") {
+                Button(LocalizationKey.renameSession.localized) {
                     onRename()
                 }
                 
-                Button("Delete", role: .destructive) {
+                Button(LocalizationKey.deleteSession.localized, role: .destructive) {
                     onDelete()
                 }
             } label: {
@@ -257,26 +257,34 @@ struct AddSessionView: View {
     @Binding var sessionName: String
     let onSave: (String) -> Void
     let onCancel: () -> Void
+    @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Add New Session")
+            Text(LocalizationKey.addNewSession.localized)
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
             
-            TextField("Session name", text: $sessionName)
+            TextField(LocalizationKey.sessionName.localized, text: $sessionName)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .foregroundColor(.white)
                 .background(Color.black.opacity(0.8))
+                .focused($isTextFieldFocused)
+                .onAppear {
+                    // 确保TextField在视图出现时获得焦点
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isTextFieldFocused = true
+                    }
+                }
             
             HStack(spacing: 16) {
-                Button("Cancel") {
+                Button(LocalizationKey.cancel.localized) {
                     onCancel()
                 }
                 .buttonStyle(SecondaryButtonStyle())
                 
-                Button("Save") {
+                Button(LocalizationKey.save.localized) {
                     onSave(sessionName)
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -289,6 +297,12 @@ struct AddSessionView: View {
                 .fill(.ultraThinMaterial)
         )
         .frame(width: 300)
+        .onAppear {
+            // 确保视图完全渲染后再设置焦点
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                isTextFieldFocused = true
+            }
+        }
     }
 }
 
@@ -296,26 +310,34 @@ struct RenameSessionView: View {
     @Binding var sessionName: String
     let onSave: (String) -> Void
     let onCancel: () -> Void
+    @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Rename Session")
+            Text(LocalizationKey.renameSession.localized)
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
             
-            TextField("Session name", text: $sessionName)
+            TextField(LocalizationKey.sessionName.localized, text: $sessionName)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .foregroundColor(.white)
                 .background(Color.black.opacity(0.8))
+                .focused($isTextFieldFocused)
+                .onAppear {
+                    // 确保TextField在视图出现时获得焦点
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        isTextFieldFocused = true
+                    }
+                }
             
             HStack(spacing: 16) {
-                Button("Cancel") {
+                Button(LocalizationKey.cancel.localized) {
                     onCancel()
                 }
                 .buttonStyle(SecondaryButtonStyle())
                 
-                Button("Save") {
+                Button(LocalizationKey.save.localized) {
                     onSave(sessionName)
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -328,6 +350,12 @@ struct RenameSessionView: View {
                 .fill(.ultraThinMaterial)
         )
         .frame(width: 300)
+        .onAppear {
+            // 确保视图完全渲染后再设置焦点
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                isTextFieldFocused = true
+            }
+        }
     }
 }
 

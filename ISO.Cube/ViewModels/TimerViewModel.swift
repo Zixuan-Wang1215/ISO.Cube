@@ -52,6 +52,16 @@ class TimerViewModel: ObservableObject {
         isInspecting = false
         inspectionSecondsRemaining = 15
     }
+    
+    func cancelTimer() {
+        timer?.cancel()
+        timer = nil
+        isTiming = false
+        startDate = nil
+        // Don't create completed solve or show confirmation
+        currentScramble = ScrambleModel.generateScramble()
+        inspectionPenalty = .none
+    }
 
     private func startTimer() {
         startDate = Date()

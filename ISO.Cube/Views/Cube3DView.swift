@@ -11,6 +11,8 @@ class HoverSCNView: SCNView {
     var isTimerRunning: Bool = false
     var isCubeConfirmed: Bool = false
     var disableInteraction: Bool = false
+    var cubeSolution: String = ""
+    var forceFullOpacity: Bool = false
     
     // 保存原始状态
     private var originalCameraPosition: SCNVector3?
@@ -22,6 +24,10 @@ class HoverSCNView: SCNView {
     private var rotationManager: CubeRotationManager?
     // 跟踪已处理的移动指令数量，避免重复执行
     public var processedMoveCount: Int = 0
+    // 跟踪已处理的解，避免重复执行
+    public var lastProcessedSolution: String = ""
+    // 跟踪是否已执行过初始解
+    public var hasExecutedInitialSolution: Bool = false
 
 
     func initializeCamera() {
@@ -31,7 +37,28 @@ class HoverSCNView: SCNView {
         cubeNodeRef = scene!.rootNode.childNode(withName: "cube", recursively: true)!
         cameraRef = cam
         cam.wantsHDR = true
-        cam.saturation = 0.1
+        
+        // 如果强制全透明度模式，直接设置为100%并调整camera位置
+        if forceFullOpacity {
+            cam.saturation = 1.0
+            cubeNodeRef!.opacity = 1.0
+            // 将camera向后拉10个单位
+            let debugCameraPos = SCNVector3(
+                node.position.x + 20,
+                node.position.y + 6,
+                node.position.z + 20
+            )
+            node.position = debugCameraPos
+            // 调整camera视角向下10度
+            let currentRotation = node.eulerAngles
+            node.eulerAngles = SCNVector3(
+                currentRotation.x + CGFloat(Float.pi) / 11, // 10度 = π/18弧度
+                currentRotation.y,
+                currentRotation.z
+            )
+        } else {
+            cam.saturation = 0.1
+        }
         
         // 保存原始状态
         originalCameraPosition = node.position
@@ -68,8 +95,6 @@ class HoverSCNView: SCNView {
         cubeNode.opacity = 1.0
         
         SCNTransaction.commit()
-        
-        print("Applied cube confirmed settings with smooth animation: camera(40,25,40), cube(2,3,2), saturation=1.0, opacity=1.0")
     }
     
     func restoreOriginalSettings() {
@@ -98,13 +123,33 @@ class HoverSCNView: SCNView {
         
         SCNTransaction.commit()
         
-        print("Restored original settings with smooth animation")
+        // 重置解的状态
+        lastProcessedSolution = ""
+        hasExecutedInitialSolution = false
     }
     
     // 处理魔方移动指令
     func handleMoveInstruction(_ move: String) {
         guard let manager = rotationManager else { return }
         manager.applyMove(move)
+    }
+    
+    // 执行魔方解（无动画）
+    func executeCubeSolution(_ solution: String) {
+        guard let manager = rotationManager else { return }
+        
+        // 如果解为空或只有空格，不执行任何操作
+        let trimmedSolution = solution.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedSolution.isEmpty {
+            return
+        }
+        
+        // 避免重复执行相同的解
+        if solution != lastProcessedSolution {
+            lastProcessedSolution = solution
+            hasExecutedInitialSolution = true
+            manager.executeSolution(solution, animated: true) // 使用队列系统，但动画速度为0
+        }
     }
 
 
@@ -126,8 +171,8 @@ class HoverSCNView: SCNView {
     override func mouseMoved(with event: NSEvent) {
         super.mouseMoved(with: event)
         
-        // 如果禁用交互或cube已确认连接，禁用鼠标悬浮交互
-        if disableInteraction || isCubeConfirmed {
+        // 如果禁用交互、cube已确认连接或强制全透明度模式，禁用鼠标悬浮交互
+        if disableInteraction || isCubeConfirmed || forceFullOpacity {
             return
         }
         
@@ -204,13 +249,27 @@ struct Cube3DView: NSViewRepresentable {
     let isTimerRunning: Bool
     let isCubeConfirmed: Bool
     let moveOutput: String
+    let cubeSolution: String
+    let hasExecutedInitialSolution: Bool
     let disableInteraction: Bool
+    let forceFullOpacity: Bool
     
     func makeNSView(context: Context) -> SCNView {
         let sceneView = HoverSCNView()
         sceneView.isTimerRunning = isTimerRunning
         sceneView.isCubeConfirmed = isCubeConfirmed
         sceneView.disableInteraction = disableInteraction
+        sceneView.cubeSolution = cubeSolution
+        sceneView.hasExecutedInitialSolution = hasExecutedInitialSolution
+        sceneView.forceFullOpacity = forceFullOpacity
+        
+        // 如果是调试窗口模式，初始化时同步移动计数
+        if forceFullOpacity && !moveOutput.isEmpty {
+            let lines = moveOutput.components(separatedBy: .newlines)
+            let moveLines = lines.filter { $0.hasPrefix("Move:") }
+            sceneView.processedMoveCount = moveLines.count
+        }
+        
         sceneView.scene = SCNScene(named: "3dcube.scn")
         sceneView.initializeCamera()
         sceneView.autoenablesDefaultLighting = true
@@ -239,6 +298,9 @@ struct Cube3DView: NSViewRepresentable {
         hoverView.isTimerRunning = isTimerRunning
         hoverView.isCubeConfirmed = isCubeConfirmed
         hoverView.disableInteraction = disableInteraction
+        hoverView.cubeSolution = cubeSolution
+        hoverView.hasExecutedInitialSolution = hasExecutedInitialSolution
+        hoverView.forceFullOpacity = forceFullOpacity
         
         // 如果cube刚刚被确认，应用设置
         if isCubeConfirmed && !wasConfirmed {
@@ -251,31 +313,65 @@ struct Cube3DView: NSViewRepresentable {
             hoverView.processedMoveCount = 0
         }
         
-        // 处理移动输出 - 只处理新的移动指令
+        // 处理魔方解和移动输出
         if !moveOutput.isEmpty {
             let lines = moveOutput.components(separatedBy: .newlines)
             let moveLines = lines.filter { $0.hasPrefix("Move:") }
             
-            // 只处理新的移动指令
-            if moveLines.count > hoverView.processedMoveCount {
-                let newMoves = Array(moveLines[hoverView.processedMoveCount...])
-                
-                for line in newMoves {
-                    let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
-                    // 提取移动令牌
-                    var moveToken = trimmedLine.replacingOccurrences(of: "Move:", with: "")
-                    if let commaIdx = moveToken.firstIndex(of: ",") {
-                        moveToken = String(moveToken[..<commaIdx])
-                    }
-                    moveToken = moveToken.trimmingCharacters(in: .whitespaces)
-                    
-                    if !moveToken.isEmpty {
-                        hoverView.handleMoveInstruction(moveToken)
-                    }
+            if forceFullOpacity {
+                // 调试窗口模式：先执行初始解，然后处理历史移动
+                if !cubeSolution.isEmpty && isCubeConfirmed && cubeSolution != hoverView.lastProcessedSolution {
+                    hoverView.executeCubeSolution(cubeSolution)
                 }
                 
-                // 更新已处理的移动数量
-                hoverView.processedMoveCount = moveLines.count
+                // 处理所有历史移动来同步状态
+                if moveLines.count > hoverView.processedMoveCount {
+                    let newMoves = Array(moveLines[hoverView.processedMoveCount...])
+                    
+                    for line in newMoves {
+                        let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                        // 提取移动令牌
+                        var moveToken = trimmedLine.replacingOccurrences(of: "Move:", with: "")
+                        if let commaIdx = moveToken.firstIndex(of: ",") {
+                            moveToken = String(moveToken[..<commaIdx])
+                        }
+                        moveToken = moveToken.trimmingCharacters(in: .whitespaces)
+                        
+                        if !moveToken.isEmpty {
+                            hoverView.handleMoveInstruction(moveToken)
+                        }
+                    }
+                    
+                    // 更新已处理的移动数量
+                    hoverView.processedMoveCount = moveLines.count
+                }
+            } else {
+                // 主界面模式：处理初始解
+                if !cubeSolution.isEmpty && isCubeConfirmed && cubeSolution != hoverView.lastProcessedSolution {
+                    hoverView.executeCubeSolution(cubeSolution)
+                }
+                
+                // 主界面模式：只处理新的移动指令
+                if moveLines.count > hoverView.processedMoveCount {
+                    let newMoves = Array(moveLines[hoverView.processedMoveCount...])
+                    
+                    for line in newMoves {
+                        let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                        // 提取移动令牌
+                        var moveToken = trimmedLine.replacingOccurrences(of: "Move:", with: "")
+                        if let commaIdx = moveToken.firstIndex(of: ",") {
+                            moveToken = String(moveToken[..<commaIdx])
+                        }
+                        moveToken = moveToken.trimmingCharacters(in: .whitespaces)
+                        
+                        if !moveToken.isEmpty {
+                            hoverView.handleMoveInstruction(moveToken)
+                        }
+                    }
+                    
+                    // 更新已处理的移动数量
+                    hoverView.processedMoveCount = moveLines.count
+                }
             }
         }
     }

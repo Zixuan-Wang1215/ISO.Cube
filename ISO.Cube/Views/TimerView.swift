@@ -23,7 +23,7 @@ struct AverageDetailView: View {
                 
                 Spacer()
                 
-                Button("Done") {
+                Button(LocalizationKey.done.localized) {
                     onClose()
                 }
                 .foregroundColor(.blue)
@@ -99,7 +99,7 @@ struct HistoryView: View {
             VStack(spacing: 0) {
                 // Header with session name
                 VStack(spacing: 8) {
-                    Text(historyManager.currentSession?.name ?? "No Session")
+                    Text(historyManager.currentSession?.name ?? LocalizationKey.noSession.localized)
                         .font(.title)
                         .fontWeight(.semibold)
                 .foregroundColor(.white)
@@ -229,7 +229,7 @@ struct HistoryView: View {
                 } else {
                     VStack {
                         Spacer()
-                        Text("No solves yet")
+                        Text(LocalizationKey.noSolvesYet.localized)
                             .font(.title2)
                             .foregroundColor(.white.opacity(0.6))
                         Spacer()
@@ -473,13 +473,177 @@ struct SolveRowView: View {
 }
 
 struct SettingsView: View {
+    @StateObject private var localizationManager = LocalizationManager.shared
+    @State private var showingLanguagePicker = false
+    
     var body: some View {
         ZStack {
             Color.black.edgesIgnoringSafeArea(.all)
-            Text("Settings")
-                .font(.largeTitle)
+            
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 16) {
+                    Text(LocalizationKey.settings.localized)
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("ISO.Cube")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+                .padding(.top, 60)
+                .padding(.bottom, 40)
+                
+                // Settings Content
+                VStack(spacing: 24) {
+                    // Language Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text(LocalizationKey.language.localized)
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.white)
+                            
+                            Spacer()
+                        }
+                        
+                        // Current Language Display
+                        Button(action: {
+                            showingLanguagePicker.toggle()
+                        }) {
+                            HStack {
+                                Text(localizationManager.currentLanguage.flag)
+                                    .font(.system(size: 24))
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(localizationManager.currentLanguage.displayName)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.white)
+                                    
+                                    Text(LocalizationKey.selectLanguage.localized)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Language Options
+                        if showingLanguagePicker {
+                            VStack(spacing: 8) {
+                                ForEach(Language.allCases, id: \.self) { language in
+                                    Button(action: {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            localizationManager.currentLanguage = language
+                                            showingLanguagePicker = false
+                                        }
+                                    }) {
+                                        HStack {
+                                            Text(language.flag)
+                                                .font(.system(size: 20))
+                                            
+                                            Text(language.displayName)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(.white)
+                                            
+                                            Spacer()
+                                            
+                                            if localizationManager.currentLanguage == language {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 14, weight: .semibold))
+                                                    .foregroundColor(.blue)
+                                            }
+                                        }
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(localizationManager.currentLanguage == language ? 
+                                                      Color.blue.opacity(0.2) : Color.white.opacity(0.05))
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 10)
+                                                        .stroke(localizationManager.currentLanguage == language ? 
+                                                               Color.blue.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
+                                                )
+                                        )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                            .padding(.top, 8)
+                        }
+                    }
+                    
+                    // App Info Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("App Info")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.white)
+                            
+                            Spacer()
+                        }
+                        
+                        VStack(spacing: 12) {
+                            InfoRow(title: "Version", value: "1.0.0")
+                            InfoRow(title: "Developer", value: "ISO.Hi")
+                            InfoRow(title: "Platform", value: "macOS")
+                        }
+                    }
+                }
+                .padding(.horizontal, 32)
+                
+                Spacer()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
+            // Refresh the view when language changes
+        }
+    }
+}
+
+// MARK: - Info Row Component
+struct InfoRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.gray)
+            
+            Spacer()
+            
+            Text(value)
+                .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.white)
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        )
     }
 }
 
@@ -549,14 +713,26 @@ struct ContentView: View {
     // Bluetooth logic moved here
     @StateObject private var bluetoothManager = BluetoothManager()
     @StateObject private var historyManager = HistoryManager()
+    @StateObject private var localizationManager = LocalizationManager.shared
     @State private var showingDevicePicker = false
     @State private var pythonProcess: Process? = nil
     @State private var isConnectedToCube = false
     @State private var moveOutput = ""
     @State private var isCubeConfirmed = false
+    @State private var cubeSolution = ""
+    @State private var cubeState = ""
+    @State private var cubeName = ""
+    @State private var cubeBattery = ""
+    @State private var showingDebugWindow = false
+    @State private var hasExecutedInitialSolution = false
     @State private var isSessionDropdownExpanded = false
     @State private var isConfirmationWindowShowing = false
     @State private var hasTriggeredSwipe = false
+    @State private var currentScramble = ""
+    @State private var shouldAutoStartInspection = false
+    @State private var shouldAutoStartTimer = false
+    @State private var shouldAutoStopTimer = false
+    @State private var hasStartedSolving = false
 
     private var selectedTabIndex: Int {
         switch selectedTab {
@@ -570,7 +746,7 @@ struct ContentView: View {
         ZStack {
             GeometryReader { geo in
                 HStack(spacing: 0) {
-                    TimerView(historyManager: historyManager, timerState: $timerState, isCubeConfirmed: $isCubeConfirmed, moveOutput: moveOutput, isSessionDropdownExpanded: $isSessionDropdownExpanded, isConfirmationWindowShowing: $isConfirmationWindowShowing)
+                    TimerView(historyManager: historyManager, timerState: $timerState, isCubeConfirmed: $isCubeConfirmed, moveOutput: moveOutput, cubeSolution: cubeSolution, hasExecutedInitialSolution: hasExecutedInitialSolution, isSessionDropdownExpanded: $isSessionDropdownExpanded, isConfirmationWindowShowing: $isConfirmationWindowShowing, currentScramble: $currentScramble, shouldAutoStartInspection: $shouldAutoStartInspection, shouldAutoStartTimer: $shouldAutoStartTimer, shouldAutoStopTimer: $shouldAutoStopTimer, hasStartedSolving: $hasStartedSolving)
                         .frame(width: geo.size.width, height: geo.size.height)
                     HistoryView(historyManager: historyManager)
                         .frame(width: geo.size.width, height: geo.size.height)
@@ -673,7 +849,7 @@ struct ContentView: View {
                     Spacer()
                         .frame(width: 8)
 
-                    // Capsule group: Bluetooth + X buttons (right)
+                    // Capsule group: Bluetooth + Debug + X buttons (right)
                     HStack(spacing: btSpacing) {
                         Button(action: {
                             NotificationCenter.default.post(name: .init("SessionDropdownShouldClose"), object: nil)
@@ -689,7 +865,20 @@ struct ContentView: View {
                                 .padding(.vertical, 7)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        
                         if isConnectedToCube {
+                            Button(action: { 
+                                NotificationCenter.default.post(name: .init("SessionDropdownShouldClose"), object: nil)
+                                showingDebugWindow = true
+                            }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.blue)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 7)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
                             Button(action: { 
                                 NotificationCenter.default.post(name: .init("SessionDropdownShouldClose"), object: nil)
                                 disconnectFromCube() 
@@ -719,22 +908,7 @@ struct ContentView: View {
                 .opacity(timerState == .running ? 0 : 1)
                 .frame(maxWidth: .infinity)
 
-                // Move output overlay (optional: show at bottom)
-                if !moveOutput.isEmpty && timerState != .running {
-                    ScrollView {
-                        Text(moveOutput)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .padding(8)
-                    }
-                    .frame(height: 100)
-                    .background(Color.black.opacity(0.3))
-                    .cornerRadius(8)
-                    .padding(.horizontal, 60)
-                    .padding(.bottom, 80)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+                // Python output window removed - output is still processed for connection confirmation
             }
         }
         .sheet(isPresented: $showingDevicePicker) {
@@ -743,6 +917,18 @@ struct ContentView: View {
                 showingDevicePicker = false
             }
         }
+        .sheet(isPresented: $showingDebugWindow) {
+            DebugWindowView(
+                cubeName: cubeName, 
+                cubeBattery: cubeBattery, 
+                cubeState: cubeState, 
+                cubeSolution: cubeSolution,
+                moveOutput: moveOutput,
+                isCubeConfirmed: isCubeConfirmed,
+                hasExecutedInitialSolution: hasExecutedInitialSolution,
+                currentScramble: currentScramble
+            )
+        }
     }
 
     // MARK: - Python Connection
@@ -750,13 +936,17 @@ struct ContentView: View {
         pythonProcess?.terminate()
         pythonProcess = nil
 
+        // 获取UUID和MAC地址
+        let uuidAddress = device.identifier.uuidString
+        let macAddress = bluetoothManager.getMacAddress(for: device)
+
         let pythonPath = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".pyenv/versions/3.12.3/bin/python").path
         let scriptPath = "/Users/iso.hi/Documents/Code/ISO.Cube/test_raw_data.py"
 
         let task = Process()
         task.executableURL = URL(fileURLWithPath: pythonPath)
-        task.arguments = [scriptPath, device.identifier.uuidString]
+        task.arguments = [scriptPath, uuidAddress, macAddress]  // 传递两个参数
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
@@ -771,6 +961,22 @@ struct ContentView: View {
                     // 检查是否是连接确认消息
                     if chunk.contains("CUBE_CONNECTED_CONFIRMATION") {
                         self.handleCubeConnectedConfirmation()
+                    }
+                    // 检查是否是魔方解的消息
+                    if chunk.contains("CUBE_SOLUTION:") {
+                        self.handleCubeSolution(chunk)
+                    }
+                    // 检查是否是魔方状态的消息
+                    if chunk.contains("State:") {
+                        self.handleCubeState(chunk)
+                    }
+                    // 检查是否是电量信息
+                    if chunk.contains("Battery:") {
+                        self.handleCubeBattery(chunk)
+                    }
+                    // 检查是否是魔方移动信息
+                    if chunk.contains("Move:") {
+                        self.handleCubeMove(chunk)
                     }
                 }
             }
@@ -794,7 +1000,8 @@ struct ContentView: View {
             try task.run()
             pythonProcess = task
             isConnectedToCube = true
-            moveOutput = "Connecting to \(device.name ?? "Unknown Device")...\n"
+            cubeName = device.name ?? "Unknown Device"
+            moveOutput = "Connecting to \(cubeName)...\n"
         } catch {
             moveOutput.append("Failed to connect: \(error)\n")
         }
@@ -806,11 +1013,86 @@ struct ContentView: View {
         isConnectedToCube = false
         moveOutput = ""
         isCubeConfirmed = false
+        cubeSolution = ""
+        cubeState = ""
+        cubeName = ""
+        cubeBattery = ""
+        hasExecutedInitialSolution = false
     }
     
     private func handleCubeConnectedConfirmation() {
         isCubeConfirmed = true
-        print("Cube connection confirmed - updating 3D view settings")
+    }
+    
+    private func handleCubeSolution(_ chunk: String) {
+        // 提取解的内容
+        if let solutionStart = chunk.range(of: "CUBE_SOLUTION: ") {
+            let solution = String(chunk[solutionStart.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            cubeSolution = solution
+        }
+    }
+    
+    private func handleCubeState(_ chunk: String) {
+        // 提取状态的内容
+        if let stateStart = chunk.range(of: "State: ") {
+            let state = String(chunk[stateStart.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            cubeState = state
+            
+            // 检查魔方状态是否与打乱状态匹配
+            checkAndStartInspectionIfMatched(cubeState: state)
+        }
+    }
+    
+    private func handleCubeBattery(_ chunk: String) {
+        // 提取电量的内容
+        if let batteryStart = chunk.range(of: "Battery: ") {
+            let battery = String(chunk[batteryStart.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            cubeBattery = battery
+        }
+    }
+    
+    private func handleCubeMove(_ chunk: String) {
+        // 提取移动的内容
+        if let moveStart = chunk.range(of: "Move: ") {
+            _ = String(chunk[moveStart.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // 如果正在倒计时中且还没有开始解题，设置开始计时的标志
+            if timerState == .inspecting && !hasStartedSolving {
+                DispatchQueue.main.async {
+                    self.hasStartedSolving = true
+                    self.shouldAutoStartTimer = true
+                }
+            }
+        }
+    }
+    
+    private func checkAndStartInspectionIfMatched(cubeState: String) {
+        // 检查是否应该开始倒计时（空闲状态）
+        if isCubeConfirmed && timerState == .idle {
+            // 获取当前打乱公式的展开状态
+            let cubeNetView = CubeNetView(scramble: currentScramble)
+            let expectedScrambledState = cubeNetView.getCubeStateString()
+            
+            // 比较魔方状态和打乱状态
+            if cubeState == expectedScrambledState {
+                // 状态匹配，设置自动开始倒计时的标志
+                DispatchQueue.main.async {
+                    self.shouldAutoStartInspection = true
+                }
+            }
+        }
+        
+        // 检查是否应该结束计时（正在计时中）
+        if isCubeConfirmed && timerState == .running && hasStartedSolving {
+            // 检查魔方是否已复原（所有面都是相同颜色）
+            let solvedState = "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB"
+            if cubeState == solvedState {
+                // 魔方已复原，设置结束计时的标志
+                DispatchQueue.main.async {
+                    self.shouldAutoStopTimer = true
+                }
+            }
+        }
     }
 }
 
@@ -821,8 +1103,15 @@ struct TimerView: View {
     @Binding var timerState: TimerState
     @Binding var isCubeConfirmed: Bool
     let moveOutput: String
+    let cubeSolution: String
+    let hasExecutedInitialSolution: Bool
     @Binding var isSessionDropdownExpanded: Bool
     @Binding var isConfirmationWindowShowing: Bool
+    @Binding var currentScramble: String
+    @Binding var shouldAutoStartInspection: Bool
+    @Binding var shouldAutoStartTimer: Bool
+    @Binding var shouldAutoStopTimer: Bool
+    @Binding var hasStartedSolving: Bool
     @State private var readyWorkItem: DispatchWorkItem?
     @State private var isPreInspectionHolding: Bool = false
     @State private var suppressNextSpaceKeyUp: Bool = false
@@ -841,7 +1130,7 @@ struct TimerView: View {
                 }
                 .padding(.horizontal)
                 
-                CubeScrambleView(scramble: timerVM.currentScramble)
+                CubeScrambleView(scramble: $timerVM.currentScramble)
                     .frame(maxWidth: .infinity)
             }
             .frame(height: 200)
@@ -918,10 +1207,10 @@ struct TimerView: View {
 
             // Cube3DView visual only, no Bluetooth UI
             ZStack(alignment: .bottom) {
-                Cube3DView(isTimerRunning: timerState == .running, isCubeConfirmed: isCubeConfirmed, moveOutput: moveOutput, disableInteraction: isSessionDropdownExpanded || isConfirmationWindowShowing)
+                Cube3DView(isTimerRunning: timerState == .running, isCubeConfirmed: isCubeConfirmed, moveOutput: moveOutput, cubeSolution: cubeSolution, hasExecutedInitialSolution: hasExecutedInitialSolution, disableInteraction: isSessionDropdownExpanded || isConfirmationWindowShowing, forceFullOpacity: false)
                     .frame(width: 2560, height: 600)
                     .offset(y: -40)
-                    .opacity(timerState == .running ? 0 : 1)
+                    .opacity((timerState == .running && !isCubeConfirmed) ? 0 : 1)
             }
             .frame(height: 500)
         }
@@ -958,6 +1247,8 @@ struct TimerView: View {
         .onAppear {
             // Connect timer to history manager
             timerVM.setHistoryManager(historyManager)
+            // Initialize currentScramble with the initial value
+            currentScramble = timerVM.currentScramble
             NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { event in
                 // Check if we're in an input field - if so, let the event pass through
                 if NSApp.keyWindow?.firstResponder is NSTextView || NSApp.keyWindow?.firstResponder is NSTextField {
@@ -974,7 +1265,7 @@ struct TimerView: View {
                     return event
                 }
                 
-                // Handle ESC key to close session dropdown or cancel countdown
+                // Handle ESC key to close session dropdown, cancel countdown, or stop timer
                 if event.keyCode == 53 { // ESC key
                     NotificationCenter.default.post(name: .init("SessionDropdownShouldClose"), object: nil)
                     
@@ -986,10 +1277,21 @@ struct TimerView: View {
                         readyWorkItem?.cancel()
                         suppressNextSpaceKeyUp = false
                     }
+                    // Cancel timer if running (no confirmation dialog)
+                    else if timerState == .running {
+                        timerVM.cancelTimer()
+                        timerState = .idle
+                        hasStartedSolving = false
+                    }
                     
                     return nil
                 }
                 if event.keyCode == 49 {
+                    // 如果魔方已连接，禁用空格键开始倒计时/计时功能
+                    if isCubeConfirmed {
+                        return event // 让事件通过，不处理空格键
+                    }
+                    
                     switch event.type {
                     case .keyDown:
                         if timerState == .idle {
@@ -1013,8 +1315,8 @@ struct TimerView: View {
                             timerVM.toggleTimer()
                             timerState = .idle
                             readyWorkItem?.cancel()
-                            // Prevent the immediate space key-up from starting a new inspection
-                            suppressNextSpaceKeyUp = true
+                            // Don't suppress the next space key-up to allow immediate next inspection
+                            suppressNextSpaceKeyUp = false
                         }
                     case .keyUp:
                         if timerState == .idle {
@@ -1051,8 +1353,8 @@ struct TimerView: View {
                     timerState = .idle
                     isPreInspectionHolding = false
                     readyWorkItem?.cancel()
-                    // Stopped by a non-space key; still ignore the next space key-up
-                    suppressNextSpaceKeyUp = true
+                    // Don't suppress the next space key-up to allow immediate next inspection
+                    suppressNextSpaceKeyUp = false
                     return nil
                 }
                 return event
@@ -1061,6 +1363,39 @@ struct TimerView: View {
         .onReceive(timerVM.$isInspecting) { inspecting in
             if !inspecting && timerState == .inspecting {
                 timerState = .idle
+            }
+        }
+        .onChange(of: timerVM.currentScramble) { _, newValue in
+            currentScramble = newValue
+        }
+        .onChange(of: shouldAutoStartInspection) { _, newValue in
+            if newValue && timerState == .idle {
+                // 自动开始15秒倒计时
+                timerVM.startInspection()
+                timerState = .inspecting
+                // 重置标志和解题状态
+                shouldAutoStartInspection = false
+                hasStartedSolving = false
+            }
+        }
+        .onChange(of: shouldAutoStartTimer) { _, newValue in
+            if newValue && timerState == .inspecting {
+                // 自动开始计时
+                timerVM.cancelInspection()
+                timerVM.toggleTimer()
+                timerState = .running
+                // 重置标志
+                shouldAutoStartTimer = false
+            }
+        }
+        .onChange(of: shouldAutoStopTimer) { _, newValue in
+            if newValue && timerState == .running {
+                // 自动结束计时
+                timerVM.toggleTimer()
+                timerState = .idle
+                hasStartedSolving = false
+                // 重置标志
+                shouldAutoStopTimer = false
             }
         }
     }
@@ -1100,6 +1435,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
     @Published var discoveredDevices: [CBPeripheral] = []
     @Published var isScanning = false
     private var centralManager: CBCentralManager?
+    private var deviceMacAddresses: [UUID: String] = [:]
 
     override init() {
         super.init()
@@ -1125,11 +1461,177 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate {
                         advertisementData: [String: Any],
                         rssi RSSI: NSNumber) {
         if let name = peripheral.name, name.uppercased().hasPrefix("GAN") {
+            // 获取MAC地址
+            var macAddress = peripheral.identifier.uuidString
+            if let data = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data {
+                let array = [UInt8](data)
+                if array.count >= 6 {
+                    macAddress = array.reversed()[0..<6]
+                        .map { String(format: "%02X", $0) }
+                        .joined(separator: ":")
+                }
+            }
+            
             DispatchQueue.main.async {
                 if !self.discoveredDevices.contains(where: { $0.identifier == peripheral.identifier }) {
+                    // 存储MAC地址到字典中
+                    self.deviceMacAddresses[peripheral.identifier] = macAddress
                     self.discoveredDevices.append(peripheral)
                 }
             }
+        }
+    }
+    
+    func getMacAddress(for peripheral: CBPeripheral) -> String {
+        return deviceMacAddresses[peripheral.identifier] ?? peripheral.identifier.uuidString
+    }
+}
+
+// MARK: - Debug Window
+struct DebugWindowView: View {
+    let cubeName: String
+    let cubeBattery: String
+    let cubeState: String
+    let cubeSolution: String
+    let moveOutput: String
+    let isCubeConfirmed: Bool
+    let hasExecutedInitialSolution: Bool
+    let currentScramble: String
+    @Environment(\.dismiss) private var dismiss
+    
+    // 生成展开state
+    private func getExpandedState() -> String {
+        // 使用传入的当前打乱公式计算展开状态
+        if !currentScramble.isEmpty {
+            let cubeNetView = CubeNetView(scramble: currentScramble)
+            return cubeNetView.getCubeStateString()
+        }
+        
+        // 如果没有打乱公式，返回复原状态
+        return "UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB"
+    }
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text(LocalizationKey.cubeInfo.localized)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Spacer()
+                Button(LocalizationKey.done.localized) {
+                    dismiss()
+                }
+            }
+            .padding()
+            
+            // 信息显示区域
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(LocalizationKey.deviceName.localized)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text(cubeName.isEmpty ? LocalizationKey.notConnected.localized : cubeName)
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding()
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(LocalizationKey.batteryLevel.localized)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    HStack {
+                        batteryIcon(for: cubeBattery)
+                        Text(cubeBattery.isEmpty ? LocalizationKey.unknown.localized : cubeBattery)
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(8)
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(LocalizationKey.expandedState.localized)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text(getExpandedState())
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding()
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(8)
+                        .lineLimit(2)
+                }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(LocalizationKey.realtimeState.localized)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text(cubeState.isEmpty ? LocalizationKey.noStateData.localized : cubeState)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .padding()
+                        .background(Color.purple.opacity(0.1))
+                        .cornerRadius(8)
+                        .lineLimit(2)
+                }
+            }
+            .padding(.horizontal)
+            
+            Spacer()
+        }
+        .frame(width: 500, height: 400)
+    }
+    
+    // 电池图标函数
+    private func batteryIcon(for battery: String) -> some View {
+        let batteryLevel = extractBatteryLevel(from: battery)
+        
+        return Image(systemName: batteryIconName(for: batteryLevel))
+            .font(.system(size: 20))
+            .foregroundColor(batteryColor(for: batteryLevel))
+    }
+    
+    private func extractBatteryLevel(from battery: String) -> Int {
+        // 从 "85%" 中提取数字
+        let cleaned = battery.replacingOccurrences(of: "%", with: "")
+        return Int(cleaned) ?? 0
+    }
+    
+    private func batteryIconName(for level: Int) -> String {
+        switch level {
+        case 0:
+            return "battery.0percent"
+        case 1...25:
+            return "battery.25percent"
+        case 26...50:
+            return "battery.50percent"
+        case 51...75:
+            return "battery.75percent"
+        case 76...100:
+            return "battery.100percent"
+        default:
+            return "battery.0percent"
+        }
+    }
+    
+    private func batteryColor(for level: Int) -> Color {
+        switch level {
+        case 0...20:
+            return .red
+        case 21...50:
+            return .orange
+        case 51...100:
+            return .green
+        default:
+            return .gray
         }
     }
 }
@@ -1143,11 +1645,11 @@ struct DevicePickerView: View {
     var body: some View {
         VStack(spacing: 20) {
             HStack {
-                Text("GAN Smart Cubes")
+                Text(LocalizationKey.ganSmartCubes.localized)
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
-                Button("Done") {
+                Button(LocalizationKey.done.localized) {
                     bluetoothManager.stopScanning()
                     dismiss()
                 }
@@ -1157,14 +1659,14 @@ struct DevicePickerView: View {
             if bluetoothManager.isScanning {
                 HStack {
                     ProgressView().scaleEffect(0.8)
-                    Text("Scanning for GAN Smart Cubes...")
+                    Text(LocalizationKey.scanningForCubes.localized)
                         .foregroundColor(.secondary)
                 }
                 .padding()
             }
 
             if bluetoothManager.discoveredDevices.isEmpty && !bluetoothManager.isScanning {
-                Text("No GAN Cubes found")
+                Text(LocalizationKey.noCubesFound.localized)
                     .foregroundColor(.secondary)
                     .padding()
             }
@@ -1172,10 +1674,13 @@ struct DevicePickerView: View {
             List(bluetoothManager.discoveredDevices, id: \.identifier) { device in
                 Button(action: { onDeviceSelected(device) }) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(device.name ?? "Unknown Device")
+                        Text(device.name ?? LocalizationKey.unknownDevice.localized)
                             .font(.headline)
-                        Text("ID: \(device.identifier.uuidString)")
+                        Text("MAC: \(bluetoothManager.getMacAddress(for: device))")
                             .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text("ID: \(device.identifier.uuidString)")
+                            .font(.caption2)
                             .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 4)
@@ -1184,10 +1689,10 @@ struct DevicePickerView: View {
             }
 
             HStack {
-                Button("Refresh") { bluetoothManager.startScanning() }
+                Button(LocalizationKey.refresh.localized) { bluetoothManager.startScanning() }
                     .disabled(bluetoothManager.isScanning)
                 Spacer()
-                Button("Stop Scanning") { bluetoothManager.stopScanning() }
+                Button(LocalizationKey.stopScanning.localized) { bluetoothManager.stopScanning() }
                     .disabled(!bluetoothManager.isScanning)
             }
             .padding()

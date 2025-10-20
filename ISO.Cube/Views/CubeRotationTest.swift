@@ -195,7 +195,7 @@ struct RotationTestScreen: View {
         VStack(spacing: 12) {
             HStack {
                 Button(action: { isRunningPython.toggle() }) {
-                    Text(isRunningPython ? "Stop" : "Connect & Stream Moves")
+                    Text(isRunningPython ? LocalizationKey.stop.localized : LocalizationKey.connectAndStream.localized)
                 }
                 Spacer()
             }
@@ -208,7 +208,7 @@ struct RotationTestScreen: View {
             .frame(height: 520)
 
             ScrollView {
-                Text(logText.isEmpty ? "(no output)" : logText)
+                Text(logText.isEmpty ? LocalizationKey.noOutput.localized : logText)
                     .font(.system(.footnote, design: .monospaced))
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .padding(8)

@@ -25,6 +25,7 @@ class GanCubeConnection:
         self.move_handler = None
         self.state_handler = None
         self.gyro_handler = None
+        self.battery_handler = None
         self.is_connected = True
     
     @property
@@ -42,6 +43,10 @@ class GanCubeConnection:
     def on_gyro(self, handler: Callable):
         """注册陀螺仪事件处理器"""
         self.gyro_handler = handler
+    
+    def on_battery(self, handler: Callable):
+        """注册电量事件处理器"""
+        self.battery_handler = handler
     
     def _emit_move(self, move_data):
         """触发移动事件"""
@@ -67,6 +72,14 @@ class GanCubeConnection:
             except Exception as e:
                 print(f"Gyro handler error: {e}")
     
+    def _emit_battery(self, battery_data):
+        """触发电量事件"""
+        if self.battery_handler:
+            try:
+                self.battery_handler(battery_data)
+            except Exception as e:
+                print(f"Battery handler error: {e}")
+    
     async def _notification_handler(self, sender, data: bytes):
         """处理通知数据"""
         if len(data) >= 16:
@@ -82,6 +95,8 @@ class GanCubeConnection:
                         self._emit_state(event.data)
                     elif event.event_type == "GYRO":
                         self._emit_gyro(event.data)
+                    elif event.event_type == "BATTERY":
+                        self._emit_battery(event.data)
             except Exception as e:
                 print(f"Data processing error: {e}")
                 import traceback
@@ -152,83 +167,33 @@ class GanCubeManager:
                 return bytes([0x00] * 6)
     
     @staticmethod
-    async def connect(manual_mac: Optional[str] = None) -> GanCubeConnection:
+    async def connect(uuid_address: str, mac_address: str) -> GanCubeConnection:
         """连接到GAN魔方"""
         
-        if manual_mac:
-            # 直接连接到指定设备
-            print(f"Connecting directly to device: {manual_mac}")
-            target_device = type('Device', (), {
-                'address': manual_mac,
-                'name': f'GAN-{manual_mac[:8]}'  # 使用UUID前8位作为名称
-            })()
-            device_name = target_device.name
-            print(f"Using device: {device_name} [{target_device.address}]")
-        else:
-            # 扫描设备
-            print("Scanning for GAN cube devices...")
-            print("Scanning Bluetooth devices...")
-            devices = await BleakScanner.discover(timeout=10.0)
-            print(f"Found {len(devices)} Bluetooth devices:")
-            
-            # 处理返回的数据结构
-            for i, device in enumerate(devices):
-                device_name = getattr(device, 'name', None) or 'Unknown'
-                print(f"  {i+1}. {device_name} [{device.address}]")
-            
-            target_device = None
-            
-            # 查找GAN魔方设备
-            for device in devices:
-                device_name = getattr(device, 'name', None)
-                if device_name:
-                    device_name_upper = device_name.upper()
-                    print(f"Checking device: '{device_name}' -> '{device_name_upper}'")
-                    if any(prefix in device_name_upper for prefix in ["GAN", "MG", "AICUBE", "CUBE", "ICARRY"]):
-                        target_device = device
-                        print(f"Found matching device: {device_name}")
-                        break
-            
-            if not target_device:
-                print("Error: No GAN cube device found")
-                print("Please ensure:")
-                print("  1. GAN cube is powered on and discoverable")
-                print("  2. Device is within Bluetooth range")
-                print("  3. Device name contains 'GAN', 'MG', 'AiCube' or 'Cube'")
-                raise RuntimeError("No GAN cube device found")
-            
-            device_name = getattr(target_device, 'name', 'Unknown')
-            print(f"Found device: {device_name} [{target_device.address}]")
+        if not uuid_address or not mac_address:
+            raise ValueError("Both UUID and MAC address are required")
         
-        # 尝试从制造商数据中提取MAC地址
-        mac_address = target_device.address  # 默认使用设备地址
+        print(f"Connecting to device UUID: {uuid_address}")
+        print(f"Using MAC address for salt: {mac_address}")
         
-        # 使用固定的MAC地址
-        mac_address = "AB:12:34:5C:3E:D0"
-        print(f"Using fixed MAC address: {mac_address}")
+        # 直接使用传入的UUID连接，不需要扫描
+        print("Connecting directly using provided UUID...")
         
-        # 生成盐值
+        # 生成盐值（使用传入的MAC地址）
         salt = GanCubeManager._generate_salt_from_mac(mac_address)
         
         # 连接设备
         print("Connecting to device...")
-        print(f"Device address: {target_device.address}")
-        print(f"Device name: {device_name}")
+        print(f"Device UUID: {uuid_address}")
         
-        # 尝试使用设备地址连接
+        # 直接使用传入的UUID连接
         try:
-            client = BleakClient(target_device.address)
+            client = BleakClient(uuid_address)
             await client.connect()
+            print("Connected using provided UUID")
         except Exception as e:
-            print(f"Failed to connect using address: {e}")
-            # 尝试使用设备名称
-            try:
-                client = BleakClient(device_name)
-                await client.connect()
-                print("Connected using device name")
-            except Exception as e2:
-                print(f"Failed to connect using name: {e2}")
-                raise e2
+            print(f"Failed to connect using UUID: {e}")
+            raise e
         print("Device connected successfully")
         
         # 确定魔方类型和设置加密器
@@ -254,6 +219,7 @@ class GanCubeManager:
                         break
                 
                 if state_char:
+                    device_name = f'GAN-{uuid_address[:8]}'
                     key_data = GAN_ENCRYPTION_KEYS[1] if device_name.startswith('AiCube') else GAN_ENCRYPTION_KEYS[0]
                     encrypter = GanGen2CubeEncrypter(
                         bytes(key_data["key"]), 
@@ -309,8 +275,14 @@ class GanCubeManager:
             await client.disconnect()
             raise RuntimeError("Unsupported cube device or target BLE service not found")
         
+        # 创建虚拟设备对象用于连接
+        virtual_device = type('Device', (), {
+            'address': uuid_address,
+            'name': f'GAN-{uuid_address[:8]}'
+        })()
+        
         # 创建连接对象
-        connection = GanCubeConnection(target_device, client, encrypter, driver)
+        connection = GanCubeConnection(virtual_device, client, encrypter, driver)
         
         # 订阅通知
         print(f"Subscribing to state notifications: {state_char.uuid}")

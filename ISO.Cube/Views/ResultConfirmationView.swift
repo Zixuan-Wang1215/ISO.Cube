@@ -21,96 +21,104 @@ struct ResultConfirmationView: View {
                     onCancel()
                 }
             
-            // Main confirmation card
-            VStack(spacing: 24) {
-                // Header
-                VStack(spacing: 8) {
-                    Text("Confirm Result")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
+            // Main confirmation card with scramble visualization
+            HStack(spacing: 24) {
+                // Left side - Confirmation content
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(spacing: 8) {
+                        Text(LocalizationKey.confirmResult.localized)
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        
+                        Text(solve.displayTime)
+                            .font(.system(size: 32, weight: .light, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
                     
-                    Text(solve.displayTime)
-                        .font(.system(size: 32, weight: .light, design: .monospaced))
-                        .foregroundColor(.white)
-                }
-                
-                // Penalty buttons
-                VStack(spacing: 8) {
+                    // Penalty buttons
+                    VStack(spacing: 8) {
+                        HStack(spacing: 16) {
+                            PenaltyButton(
+                                title: LocalizationKey.ok.localized,
+                                isSelected: selectedPenalty == 0,
+                                color: .green
+                            ) {
+                                selectedPenalty = 0
+                            }
+                            
+                            PenaltyButton(
+                                title: LocalizationKey.plusTwo.localized,
+                                isSelected: selectedPenalty == 2000,
+                                color: .orange
+                            ) {
+                                selectedPenalty = 2000
+                            }
+                            
+                            PenaltyButton(
+                                title: LocalizationKey.dnf.localized,
+                                isSelected: selectedPenalty == -1,
+                                color: .red
+                            ) {
+                                selectedPenalty = -1
+                            }
+                        }
+                        
+                        // Keyboard shortcuts hint
+                        Text("\(LocalizationKey.enterToConfirm.localized) • \(LocalizationKey.escToCancel.localized)")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                    
+                    // Scramble input
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(LocalizationKey.scramble.localized)
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                        
+                        TextField(LocalizationKey.scrambleSequence.localized, text: $scramble)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .foregroundColor(.white)
+                            .background(Color.black.opacity(0.8))
+                            .onTapGesture {
+                                isShowingKeyboard = true
+                            }
+                    }
+                    
+                    // Comment input
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(LocalizationKey.commentOptional.localized)
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                        
+                        TextField(LocalizationKey.addComment.localized, text: $comment)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .foregroundColor(.white)
+                            .background(Color.black.opacity(0.8))
+                            .onTapGesture {
+                                isShowingKeyboard = true
+                            }
+                    }
+                    
+                    // Action buttons
                     HStack(spacing: 16) {
-                        PenaltyButton(
-                            title: "OK",
-                            isSelected: selectedPenalty == 0,
-                            color: .green
-                        ) {
-                            selectedPenalty = 0
+                        Button(LocalizationKey.delete.localized) {
+                            onDelete()
                         }
+                        .buttonStyle(SecondaryButtonStyle())
                         
-                        PenaltyButton(
-                            title: "+2",
-                            isSelected: selectedPenalty == 2000,
-                            color: .orange
-                        ) {
-                            selectedPenalty = 2000
+                        Button(LocalizationKey.confirm.localized) {
+                            onConfirm(selectedPenalty, comment, scramble)
                         }
-                        
-                        PenaltyButton(
-                            title: "DNF",
-                            isSelected: selectedPenalty == -1,
-                            color: .red
-                        ) {
-                            selectedPenalty = -1
-                        }
+                        .buttonStyle(PrimaryButtonStyle())
                     }
-                    
-                    // Keyboard shortcuts hint
-                    Text("Enter to confirm • ESC to cancel")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.6))
                 }
+                .frame(width: 320)
                 
-                // Scramble input
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Scramble")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                    
-                    TextField("Scramble sequence...", text: $scramble)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .foregroundColor(.white)
-                        .background(Color.black.opacity(0.8))
-                        .onTapGesture {
-                            isShowingKeyboard = true
-                        }
-                }
-                
-                // Comment input
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Comment (optional)")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                    
-                    TextField("Add a comment...", text: $comment)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .foregroundColor(.white)
-                        .background(Color.black.opacity(0.8))
-                        .onTapGesture {
-                            isShowingKeyboard = true
-                        }
-                }
-                
-                // Action buttons
-                HStack(spacing: 16) {
-                    Button("Delete") {
-                        onDelete()
-                    }
-                    .buttonStyle(SecondaryButtonStyle())
-                    
-                    Button("Confirm") {
-                        onConfirm(selectedPenalty, comment, scramble)
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                }
+                // Right side - Scramble visualization
+                CubeNetView(scramble: scramble)
+                    .frame(width: 300, height: 70)
             }
             .padding(24)
             .background(
@@ -121,7 +129,6 @@ struct ResultConfirmationView: View {
                             .stroke(Color.white.opacity(0.2), lineWidth: 1)
                     )
             )
-            .frame(width: 320)
             .scaleEffect(isShowingKeyboard ? 0.95 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: isShowingKeyboard)
         }
